@@ -638,6 +638,18 @@ self["C3_Shaders"] = {};
 
 "use strict";C3.Behaviors.shadowcaster.Exps={Height(){return this.GetHeight()},Tag(){return this.GetTag()}};
 
+"use strict";C3.Behaviors.DragnDrop=class extends C3.SDKBehaviorBase{constructor(a){super(a);const b=this._runtime.Dispatcher();this._disposables=new C3.CompositeDisposable(C3.Disposable.From(b,"pointerdown",(a)=>this._OnPointerDown(a.data)),C3.Disposable.From(b,"pointermove",(a)=>this._OnPointerMove(a.data)),C3.Disposable.From(b,"pointerup",(a)=>this._OnPointerUp(a.data,!1)),C3.Disposable.From(b,"pointercancel",(a)=>this._OnPointerUp(a.data,!0)))}Release(){this._disposables.Release(),this._disposables=null,super.Release()}_OnPointerDown(a){this._OnInputDown(a["pointerId"].toString(),a["clientX"]-this._runtime.GetCanvasClientX(),a["clientY"]-this._runtime.GetCanvasClientY())}_OnPointerMove(a){this._OnInputMove(a["pointerId"].toString(),a["clientX"]-this._runtime.GetCanvasClientX(),a["clientY"]-this._runtime.GetCanvasClientY())}_OnPointerUp(a){this._OnInputUp(a["pointerId"].toString())}async _OnInputDown(a,b,c){const d=this.GetInstances();let e=null,f=null,g=0,h=0;for(const i of d){const a=i.GetBehaviorSdkInstanceFromCtor(C3.Behaviors.DragnDrop);if(!a.IsEnabled()||a.IsDragging())continue;const d=i.GetWorldInfo(),j=d.GetLayer(),[k,l]=j.CanvasCssToLayer(b,c,d.GetTotalZElevation());if(!d.ContainsPoint(k,l))continue;if(!e){e=i,f=a,g=k,h=l;continue}const m=e.GetWorldInfo();(j.GetIndex()>m.GetLayer().GetIndex()||j.GetIndex()===m.GetLayer().GetIndex()&&d.GetZIndex()>m.GetZIndex())&&(e=i,f=a,g=k,h=l)}e&&(await f._OnDown(a,g,h))}_OnInputMove(a,b,c){const d=this.GetInstances();for(const e of d){const d=e.GetBehaviorSdkInstanceFromCtor(C3.Behaviors.DragnDrop);if(!d.IsEnabled()||!d.IsDragging()||d.IsDragging()&&d.GetDragSource()!==a)continue;const f=e.GetWorldInfo(),g=f.GetLayer(),[h,i]=g.CanvasCssToLayer(b,c,f.GetTotalZElevation());d._OnMove(h,i)}}async _OnInputUp(a){const b=this.GetInstances();for(const c of b){const b=c.GetBehaviorSdkInstanceFromCtor(C3.Behaviors.DragnDrop);b.IsDragging()&&b.GetDragSource()===a&&(await b._OnUp())}}};
+
+"use strict";C3.Behaviors.DragnDrop.Type=class extends C3.SDKBehaviorTypeBase{constructor(a){super(a)}Release(){super.Release()}OnCreate(){}};
+
+"use strict";{C3.Behaviors.DragnDrop.Instance=class extends C3.SDKBehaviorInstanceBase{constructor(a,b){super(a),this._isDragging=!1,this._dx=0,this._dy=0,this._dragSource="<none>",this._axes=0,this._isEnabled=!0,b&&(this._axes=b[0],this._isEnabled=b[1])}Release(){super.Release()}SaveToJson(){return{"a":this._axes,"e":this._isEnabled}}LoadFromJson(a){this._axes=a["a"],this._isEnabled=a["e"],this._isDragging=!1}IsEnabled(){return this._isEnabled}IsDragging(){return this._isDragging}GetDragSource(){return this._dragSource}async _OnDown(a,b,c){const d=this.GetWorldInfo();this._dx=b-d.GetX(),this._dy=c-d.GetY(),this._isDragging=!0,this._dragSource=a,await this.TriggerAsync(C3.Behaviors.DragnDrop.Cnds.OnDragStart)}_OnMove(a,b){const c=this.GetWorldInfo(),d=a-this._dx,e=b-this._dy;0===this._axes?(c.GetX()!==d||c.GetY()!==e)&&(c.SetXY(d,e),c.SetBboxChanged()):1===this._axes?c.GetX()!==d&&(c.SetX(d),c.SetBboxChanged()):2===this._axes&&c.GetY()!==e&&(c.SetY(e),c.SetBboxChanged())}async _OnUp(){this._isDragging=!1,await this.TriggerAsync(C3.Behaviors.DragnDrop.Cnds.OnDrop)}GetPropertyValueByIndex(a){return a===0?this._axes:1===a?this._isEnabled:void 0}SetPropertyValueByIndex(a,b){a===0?this._axes=b:1===a?this._isEnabled=!!b:void 0}GetDebuggerProperties(){return[{title:"$"+this.GetBehaviorType().GetName(),properties:[{name:"behaviors.dragndrop.debugger.is-dragging",value:this._isDragging},{name:"behaviors.dragndrop.properties.enabled.name",value:this._isEnabled,onedit:(a)=>this._isEnabled=a}]}]}}}
+
+"use strict";C3.Behaviors.DragnDrop.Cnds={IsDragging(){return this._isDragging},OnDragStart(){return!0},OnDrop(){return!0},IsEnabled(){return this._isEnabled}};
+
+"use strict";C3.Behaviors.DragnDrop.Acts={SetEnabled(a){this._isEnabled=!!a,this._isEnabled||(this._isDragging=!1)},SetAxes(b){this._axes=b},Drop(){this._isDragging&&this._OnUp()}};
+
+"use strict";C3.Behaviors.DragnDrop.Exps={};
+
 "use strict"
 self.C3_GetObjectRefTable = function () {
 	return [
@@ -654,11 +666,28 @@ self.C3_GetObjectRefTable = function () {
 		C3.Plugins.progressbar,
 		C3.Behaviors.shadowcaster,
 		C3.Plugins.Text,
+		C3.Behaviors.DragnDrop,
+		C3.Plugins.System.Cnds.IsGroupActive,
+		C3.Behaviors.DragnDrop.Cnds.IsDragging,
+		C3.Plugins.Sprite.Cnds.IsBoolInstanceVarSet,
+		C3.Plugins.Sprite.Acts.SetInstanceVar,
+		C3.Plugins.Sprite.Exps.X,
+		C3.Plugins.Sprite.Cnds.CompareInstanceVar,
+		C3.Behaviors.EightDir.Acts.SetVectorX,
+		C3.Plugins.Sprite.Acts.SetAnimSpeed,
+		C3.Plugins.Sprite.Cnds.CompareX,
+		C3.Plugins.Sprite.Acts.SetX,
+		C3.Behaviors.DragnDrop.Cnds.OnDrop,
+		C3.Plugins.Sprite.Exps.Y,
+		C3.Behaviors.EightDir.Acts.SetVectorY,
+		C3.Plugins.Sprite.Cnds.CompareY,
+		C3.Plugins.Sprite.Acts.SetY,
+		C3.Plugins.Touch.Cnds.IsTouchingObject,
+		C3.Plugins.Sprite.Acts.SetBoolInstanceVar,
 		C3.Plugins.System.Cnds.OnLayoutStart,
 		C3.Plugins.Sprite.Acts.SetAngle,
 		C3.Plugins.System.Exps.random,
 		C3.Plugins.Sprite.Acts.SetVisible,
-		C3.Plugins.Sprite.Acts.SetInstanceVar,
 		C3.Plugins.System.Acts.SetVar,
 		C3.Behaviors.EightDir.Cnds.IsMoving,
 		C3.Plugins.Sprite.Acts.SetAnim,
@@ -667,30 +696,23 @@ self.C3_GetObjectRefTable = function () {
 		C3.Plugins.Sprite.Acts.Destroy,
 		C3.Plugins.System.Acts.AddVar,
 		C3.Plugins.Touch.Cnds.OnTapGesture,
-		C3.Plugins.Sprite.Cnds.CompareInstanceVar,
 		C3.Behaviors.Bullet.Acts.SetSpeed,
 		C3.Behaviors.Bullet.Acts.SetAngleOfMotion,
 		C3.Plugins.Sprite.Exps.Angle,
 		C3.Plugins.System.Acts.Wait,
 		C3.Plugins.Sprite.Cnds.IsOutsideLayout,
-		C3.Plugins.Touch.Cnds.IsTouchingObject,
-		C3.Behaviors.EightDir.Acts.SimulateControl,
 		C3.Plugins.Sprite.Acts.SubInstanceVar,
 		C3.Plugins.System.Cnds.ForEach,
 		C3.Plugins.System.Cnds.Compare,
-		C3.Plugins.Sprite.Exps.X,
-		C3.Plugins.Sprite.Exps.Y,
 		C3.Behaviors.LOS.Cnds.HasLOSToObject,
 		C3.Plugins.Sprite.Acts.RotateTowardPosition,
 		C3.Plugins.Sprite.Exps.Count,
 		C3.Plugins.System.Acts.RestartLayout,
 		C3.Plugins.System.Cnds.Every,
 		C3.Plugins.Sprite.Cnds.IsAnimPlaying,
-		C3.Plugins.Sprite.Cnds.IsBoolInstanceVarSet,
 		C3.Plugins.System.Cnds.EveryTick,
 		C3.Plugins.progressbar.Acts.SetProgress,
 		C3.Plugins.Text.Acts.SetText,
-		C3.Plugins.Sprite.Acts.SetBoolInstanceVar,
 		C3.Behaviors.Pathfinding.Acts.FindPath,
 		C3.Behaviors.Pathfinding.Cnds.IsCalculatingPath,
 		C3.Behaviors.Pathfinding.Acts.StartMoving,
@@ -703,6 +725,8 @@ self.C3_JsPropNameTable = [
 	{Тач: 0},
 	{hp: 0},
 	{shoot: 0},
+	{maxspeed: 0},
+	{JoystickOn: 0},
 	{ОграничитьСценой: 0},
 	{Твердый: 0},
 	{"8Направлений": 0},
@@ -715,17 +739,9 @@ self.C3_JsPropNameTable = [
 	{ПолеЗрения: 0},
 	{ПоискПути: 0},
 	{Player2: 0},
-	{Up: 0},
-	{Down: 0},
-	{Leftt: 0},
-	{Rightt: 0},
 	{Explosion: 0},
 	{Restart: 0},
 	{Индикатор: 0},
-	{button_up: 0},
-	{button_down: 0},
-	{button_left: 0},
-	{button_right: 0},
 	{health: 0},
 	{Restart2: 0},
 	{hp_block: 0},
@@ -735,10 +751,20 @@ self.C3_JsPropNameTable = [
 	{brick2: 0},
 	{hp_block3: 0},
 	{brick3: 0},
-	{Grass: 0},
 	{brick4: 0},
 	{score: 0},
 	{text: 0},
+	{Touch: 0},
+	{LeftPart: 0},
+	{StartX: 0},
+	{MaxX: 0},
+	{VectorJoyX: 0},
+	{StartY: 0},
+	{MaxY: 0},
+	{VectorJoyY: 0},
+	{Перетаскивание: 0},
+	{CurPos: 0},
+	{Joystick: 0},
 	{player2_speed: 0}
 ];
 
@@ -838,6 +864,36 @@ self.C3_JsPropNameTable = [
 	}
 
 	self.C3_ExpressionFuncs = [
+		() => "Joystick",
+		() => "VectorX",
+		p => {
+			const n0 = p._GetNode(0);
+			const n1 = p._GetNode(1);
+			const n2 = p._GetNode(2);
+			const n3 = p._GetNode(3);
+			return () => (((n0.ExpObject() - n1.ExpInstVar()) / n2.ExpInstVar()) * n3.ExpInstVar());
+		},
+		() => 40,
+		() => -40,
+		p => {
+			const n0 = p._GetNode(0);
+			return () => n0.ExpInstVar();
+		},
+		p => {
+			const n0 = p._GetNode(0);
+			return () => (n0.ExpInstVar() / 11.76470588235294);
+		},
+		p => {
+			const n0 = p._GetNode(0);
+			const n1 = p._GetNode(1);
+			return () => (n0.ExpInstVar() - n1.ExpInstVar());
+		},
+		p => {
+			const n0 = p._GetNode(0);
+			const n1 = p._GetNode(1);
+			return () => (n0.ExpInstVar() + n1.ExpInstVar());
+		},
+		() => "VectorY",
 		p => {
 			const f0 = p._GetNode(0).GetBoundMethod();
 			return () => f0(360);
@@ -845,15 +901,15 @@ self.C3_JsPropNameTable = [
 		() => 1,
 		() => 150,
 		() => 0,
-		() => "move",
-		() => 20,
-		() => 250,
-		() => "shoot",
-		() => 400,
 		p => {
 			const n0 = p._GetNode(0);
 			return () => n0.ExpObject();
 		},
+		() => "move",
+		() => 20,
+		() => 250,
+		() => "shoot",
+		() => 600,
 		p => {
 			const n0 = p._GetNode(0);
 			const n1 = p._GetNode(1);
@@ -873,21 +929,21 @@ self.C3_JsPropNameTable = [
 		() => 300,
 		() => "stay",
 		p => {
-			const n0 = p._GetNode(0);
-			return () => n0.ExpInstVar();
-		},
-		p => {
 			const v0 = p._GetNode(0).GetVar();
 			return () => and("Score: ", v0.GetValue());
 		},
 		() => 2,
-		() => 350,
-		() => 120,
+		() => 900,
 		() => 0.1,
+		() => 500,
 		() => 5,
 		p => {
 			const f0 = p._GetNode(0).GetBoundMethod();
-			return () => f0(1000);
+			return () => f0(1500);
+		},
+		p => {
+			const f0 = p._GetNode(0).GetBoundMethod();
+			return () => f0(750);
 		},
 		p => {
 			const v0 = p._GetNode(0).GetVar();
